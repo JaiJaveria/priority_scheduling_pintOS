@@ -15,10 +15,17 @@
 #include "vm/sup_page.h"
 #include "vm/frame.h"
 
+struct write_args {
+int num;
+int fd;
+const void *buffer;
+unsigned length;
+};
+
 static void syscall_handler (struct intr_frame *);
 
 void
-syscall_init (void) 
+syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
@@ -29,7 +36,7 @@ syscall_init (void)
  */
 bool validate_user_addr_range(uint8_t *va, size_t bcnt, uint32_t* esp, bool exact);
 
-/* Uses the second technique mentioned in pintos doc. 3.1.5 
+/* Uses the second technique mentioned in pintos doc. 3.1.5
    to cause page faults and check addresses (returns -1 on fault) */
 
 /* Reads a byte at user virtual address UADDR.
@@ -54,7 +61,7 @@ put_user (uint8_t *udst, uint8_t byte) {
   return error_code != -1;
 }
 */
-/* Used to validate pointers, buffers and strings. 
+/* Used to validate pointers, buffers and strings.
    With exact false, it validates until 0 (end of string). */
 bool validate_user_addr_range(uint8_t *va, size_t bcnt, uint32_t* esp, bool exact) {
   if(va == NULL)  /* NULL is not allowed */
@@ -88,8 +95,30 @@ bool validate_user_addr_range(uint8_t *va, size_t bcnt, uint32_t* esp, bool exac
      fs_give(); }
 
 static void
-syscall_handler (struct intr_frame *f) 
+syscall_handler (struct intr_frame *f)
 {
-      printf("System calls not implemented.\n");
-      thread_exit();
+  int NUMBER=(int)f->esp;
+  switch (NUMBER) {
+    case SYS_WRITE:
+    {
+      struct write_args *args = (struct write_args *) f->esp;
+      if (args->fd == STDOUT_FILENO) {
+      putbuf(args->buffer, args->length);
+      }
+      else
+      {
+        printf("System calls not implemented.\n");
+        // thread_exit();
+        // file_write(, args->buffer, args->length);
+
+      }
+      break;
+    }
+    default:
+    {
+        printf("System calls not implemented.\n");
+        // thread_exit();
+    }
+  }
+
 }
