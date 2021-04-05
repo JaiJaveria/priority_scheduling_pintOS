@@ -97,8 +97,9 @@ bool validate_user_addr_range(uint8_t *va, size_t bcnt, uint32_t* esp, bool exac
 static void
 syscall_handler (struct intr_frame *f)
 {
-  int NUMBER=(int)f->esp;
-  switch (NUMBER) {
+  int* NUMBER= (int*) ((f->esp));
+  printf("101 syscall number %d\n", *NUMBER);
+  switch (*NUMBER) {
     case SYS_WRITE:
     {
       struct write_args *args = (struct write_args *) f->esp;
@@ -107,8 +108,8 @@ syscall_handler (struct intr_frame *f)
       }
       else
       {
-        printf("System calls not implemented.\n");
-        // thread_exit();
+        printf("System calls not implemented 110.\n");
+        thread_exit();
         // file_write(, args->buffer, args->length);
 
       }
@@ -116,8 +117,8 @@ syscall_handler (struct intr_frame *f)
     }
     default:
     {
-        printf("System calls not implemented.\n");
-        // thread_exit();
+        printf("System calls not implemented 119.\n");
+        thread_exit();
     }
   }
 
