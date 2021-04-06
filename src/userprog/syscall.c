@@ -27,9 +27,12 @@ const char *file;
 unsigned initial_size;
 };
 static void syscall_handler (struct intr_frame *);
+static void invalid_access();
+static void my_exit();
 
-void
-syscall_init (void)
+
+struct lock file_lock;
+void syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
@@ -109,6 +112,10 @@ syscall_handler (struct intr_frame *f)
         struct write_args *args = (struct write_args *) f->esp;
         if (args->fd == STDOUT_FILENO)
         {
+          if(!validate_user_addr_range(args->buffer,args->length, f->esp, false))
+            {
+              invalid_access();
+            }
           putbuf(args->buffer, args->length);
           f->eax= args->length;
         }
@@ -124,8 +131,22 @@ syscall_handler (struct intr_frame *f)
     case SYS_CREATE:
       {
         struct create_args *args = (struct create_args *) f->esp;
+        if(!validate_user_addr_range(args->file,1, f->esp, false))//just look at the first address
+          {
+            invalid_access();
+          }
         f->eax=filesys_create(args->file, args->initial_size);
         break;
+      }
+    case SYS_EXIT:
+      {
+        my_exit();
+
+        // break;
+      }
+    case SYS_HALT:
+      {
+        shutdown_power_off();
       }
     default:
     {
@@ -134,4 +155,17 @@ syscall_handler (struct intr_frame *f)
     }
   }
 
+}
+
+static void invalid_access()
+{
+  if (lock_held_by_current_thread(&file_lock))
+  {
+    lock_release(&file_lock);
+  }
+  my_exit();
+}
+void my_exit()
+{
+  thread_exit();
 }
