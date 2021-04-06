@@ -15,6 +15,13 @@
 #include "vm/sup_page.h"
 #include "vm/frame.h"
 
+int numOpenFiles=0;//used to assign the id of open file
+struct oFiles_elem
+{
+  struct file * file_fd;
+  int num_fd;
+  struct list_elem elem;
+};
 struct write_args {
 int num;
 int fd;
@@ -26,14 +33,21 @@ int num;
 const char *file;
 unsigned initial_size;
 };
+struct open_args {
+int num;
+const char *file;
+};
+
 static void syscall_handler (struct intr_frame *);
 static void invalid_access();
 static void my_exit();
 
-
+struct list oFiles;//files that are open
 struct lock file_lock;
 void syscall_init (void)
 {
+  lock_init(&file_lock);
+  list_init(&oFiles);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -105,7 +119,7 @@ static void
 syscall_handler (struct intr_frame *f)
 {
   int* NUMBER= (int*) ((f->esp));
-  printf("101 syscall number %d\n", *NUMBER);
+  printf("syscall.c-122 syscall number %d\n", *NUMBER);
   switch (*NUMBER) {
     case SYS_WRITE:
       {
@@ -141,16 +155,36 @@ syscall_handler (struct intr_frame *f)
     case SYS_EXIT:
       {
         my_exit();
-
         // break;
       }
     case SYS_HALT:
       {
         shutdown_power_off();
       }
+    case SYS_OPEN:
+      {
+        struct open_args *args = (struct open_args *) f->esp;
+        if(!validate_user_addr_range(args->file,1, f->esp, false))//just look at the first address
+          {
+            invalid_access();
+          }
+        lock_acquire(&file_lock);
+        struct file * file_fd= filesys_open(args->file);
+        struct oFiles_elem oe;
+        oe.file_fd=file_fd;
+        oe.num_fd=numOpenFiles+2;//does no reclaimation
+        numOpenFiles++;
+        list_push_back(&oFiles,&(oe.elem) );
+        // oe.
+        lock_release(&file_lock);
+        f->eax=oe.num_fd;
+      }
+      break;
+    // case SYS_READ:
+    //   {}
     default:
     {
-        printf("119 System calls not implemented.\n");
+        printf("System calls not implemented.\n");
         thread_exit();
     }
   }
