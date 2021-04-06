@@ -21,7 +21,11 @@ int fd;
 const void *buffer;
 unsigned length;
 };
-
+struct create_args {
+int num;
+const char *file;
+unsigned initial_size;
+};
 static void syscall_handler (struct intr_frame *);
 
 void
@@ -101,23 +105,31 @@ syscall_handler (struct intr_frame *f)
   printf("101 syscall number %d\n", *NUMBER);
   switch (*NUMBER) {
     case SYS_WRITE:
-    {
-      struct write_args *args = (struct write_args *) f->esp;
-      if (args->fd == STDOUT_FILENO) {
-      putbuf(args->buffer, args->length);
-      }
-      else
       {
-        printf("System calls not implemented 110.\n");
-        thread_exit();
-        // file_write(, args->buffer, args->length);
+        struct write_args *args = (struct write_args *) f->esp;
+        if (args->fd == STDOUT_FILENO)
+        {
+          putbuf(args->buffer, args->length);
+          f->eax= args->length;
+        }
+        else
+        {
+          printf("110 System calls not implemented.\n");
+          thread_exit();
+          // file_write(, args->buffer, args->length);
 
+        }
+        break;
       }
-      break;
-    }
+    case SYS_CREATE:
+      {
+        struct create_args *args = (struct create_args *) f->esp;
+        f->eax=filesys_create(args->file, args->initial_size);
+        break;
+      }
     default:
     {
-        printf("System calls not implemented 119.\n");
+        printf("119 System calls not implemented.\n");
         thread_exit();
     }
   }
