@@ -37,6 +37,16 @@ struct open_args {
 int num;
 const char *file;
 };
+struct close_args {
+int num;
+int fd;
+};
+struct read_args {
+int num;
+int fd;
+void *buffer;
+unsigned size;
+};
 
 static void syscall_handler (struct intr_frame *);
 static void invalid_access();
@@ -170,18 +180,86 @@ syscall_handler (struct intr_frame *f)
           }
         lock_acquire(&file_lock);
         struct file * file_fd= filesys_open(args->file);
-        struct oFiles_elem oe;
-        oe.file_fd=file_fd;
-        oe.num_fd=numOpenFiles+2;//does no reclaimation
-        numOpenFiles++;
-        list_push_back(&oFiles,&(oe.elem) );
-        // oe.
+        if (!file_fd) {
+          lock_release(&file_lock);
+            f->eax=-1;
+            break;
+        }
+        struct oFiles_elem* oe=palloc_get_page(PAL_USER);
+        oe->file_fd=file_fd;
+        oe->num_fd=numOpenFiles+3;//does no reclaimation. 0,1,2 are for stdin, stdout, stderr so start from 3
+        list_push_back(&oFiles,&(oe->elem) );
         lock_release(&file_lock);
-        f->eax=oe.num_fd;
+        // oe.
+        numOpenFiles++;
+        f->eax=oe->num_fd;
+        break;
       }
-      break;
-    // case SYS_READ:
-    //   {}
+    case SYS_CLOSE:
+      {
+        struct close_args *args = (struct close_args *) f->esp;
+        struct list_elem *e;
+        struct file *file_fd;
+        int found_file=0;
+        struct oFiles_elem *fof;
+        for (e = list_begin (&oFiles); e != list_end (&oFiles);
+             e = list_next (e))
+          {
+            // printf("196\n");
+            fof = list_entry (e, struct oFiles_elem, elem);
+            if (fof->num_fd==args->fd) {
+              file_fd=fof->file_fd;
+              found_file=1;
+              break;
+            }
+          }
+        if(found_file==0)
+        {
+          printf("Error Trying to close a file which might not be open. could not find file descriptor. exiting\n" );
+          my_exit();
+        }
+        lock_acquire(&file_lock);
+        file_close(file_fd);
+        list_remove(&(fof->elem));
+        palloc_free_page(fof);
+        lock_release(&file_lock);
+        break;
+      }
+    case SYS_READ:
+      {
+        struct read_args *args = (struct read_args *) f->esp;
+        if (!validate_user_addr_range(args->buffer,args->size,f->esp,false)) {
+          printf("Invalid access in sys call read. Exiting\n");
+          invalid_access();
+        }
+        struct list_elem *e;
+        struct file *file_fd;
+        int found_file=0;
+        lock_acquire(&file_lock);
+        for (e = list_begin (&oFiles); e != list_end (&oFiles);
+             e = list_next (e))
+          {
+            // printf("196\n");
+            struct oFiles_elem *fof = list_entry (e, struct oFiles_elem, elem);
+            if (fof->num_fd==args->fd) {
+              file_fd=fof->file_fd;
+              found_file=1;
+              break;
+            }
+          }
+        if(found_file==0)
+        {
+          // printf("Error Trying to read a file which might not be open. could not find file descriptor. exiting\n" );
+          // my_exit();
+          f->eax=-1;
+        }
+        else
+        {
+          f->eax=file_read(file_fd,args->buffer, args->size);
+        }
+        lock_release(&file_lock);
+        break;
+      }
     default:
     {
         printf("System calls not implemented.\n");
