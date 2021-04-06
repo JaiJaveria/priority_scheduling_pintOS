@@ -84,14 +84,14 @@ get_user (const uint8_t *uaddr) {
 /* Writes BYTE to user address UDST.
    UDST must be below PHYS_BASE.
    Returns true if successful, false if a segfault occurred. */
-/*
+
 static bool
 put_user (uint8_t *udst, uint8_t byte) {
   int error_code;
   asm ("movl $1f, %0; movb %b2, %1; 1:" : "=&a" (error_code), "=m" (*udst) : "q" (byte));
   return error_code != -1;
 }
-*/
+
 /* Used to validate pointers, buffers and strings.
    With exact false, it validates until 0 (end of string). */
 bool validate_user_addr_range(uint8_t *va, size_t bcnt, uint32_t* esp, bool exact) {
@@ -145,10 +145,31 @@ syscall_handler (struct intr_frame *f)
         }
         else
         {
-          printf("110 System calls not implemented.\n");
-          thread_exit();
-          // file_write(, args->buffer, args->length);
-
+          struct list_elem *e;
+          struct file *file_fd;
+          int found_file=0;
+          struct oFiles_elem *fof;
+          for (e = list_begin (&oFiles); e != list_end (&oFiles);
+               e = list_next (e))
+            {
+              // printf("196\n");
+              fof = list_entry (e, struct oFiles_elem, elem);
+              if (fof->num_fd==args->fd) {
+                file_fd=fof->file_fd;
+                found_file=1;
+                break;
+              }
+            }
+          if(found_file==0)
+          {
+            f->eax=-1;
+            break;
+            // printf("Error Trying to write a file which might not be open. could not find file descriptor. exiting\n" );
+            // my_exit();
+          }
+          lock_acquire(&file_lock);
+          f->eax=file_write(file_fd, args->buffer, args->length);
+          lock_release(&file_lock);
         }
         break;
       }
@@ -232,10 +253,27 @@ syscall_handler (struct intr_frame *f)
           printf("Invalid access in sys call read. Exiting\n");
           invalid_access();
         }
+        lock_acquire(&file_lock);
+        if (args->fd==STDIN_FILENO)
+        {
+          void *buffer=args->buffer;
+          for (size_t i = 0; i < args->size; i++)
+          {
+            if(!put_user(buffer+i, input_getc()))
+            {
+              //some error
+              printf("Error in taking input from console exiting\n" );
+              lock_release(&file_lock);
+              my_exit();
+            }
+          }
+          lock_release(&file_lock);
+          f->eax=args->size;
+          break;
+        }
         struct list_elem *e;
         struct file *file_fd;
         int found_file=0;
-        lock_acquire(&file_lock);
         for (e = list_begin (&oFiles); e != list_end (&oFiles);
              e = list_next (e))
           {
