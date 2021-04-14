@@ -206,3 +206,7 @@ int main(void)
 
   ERROR("ERR: Thread did not exit.\n");
 }
+// int main(int argc, char const *argv[]) {
+//   printf("Hello World\n" );
+//   return 0;
+// }
