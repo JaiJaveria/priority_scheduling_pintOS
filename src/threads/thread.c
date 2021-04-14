@@ -18,6 +18,8 @@
 #include "vm/sup_page.h"
 #endif
 
+//global varoable for maximum priority
+int maxpriority=-1;
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -203,11 +205,17 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  if (thread_current()->priority<priority)
+  {
+    thread_yield();
+    /* code */
+  }
 
   return tid;
 }
 bool compare_priority(const struct list_elem *e1,const struct list_elem *e2, void *args)
 {
+  // printf("211 Inside compare _priority\n" );
   return ( (list_entry(e1, struct thread, elem)->priority) > (list_entry(e2, struct thread, elem)->priority));
 }
 /* Puts the current thread to sleep.  It will not be scheduled
@@ -243,6 +251,10 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+  if (t->priority>maxpriority)
+  {
+    maxpriority=t->priority;//only update max priority when ready list is updated
+  }
   list_insert_ordered (&ready_list, &t->elem,&compare_priority,NULL);
   // list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
@@ -321,8 +333,15 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread)
+  {
+    if (cur->priority>maxpriority)
+    {
+      maxpriority=cur->priority;//only update max priority when ready list is updated
+    }
     list_insert_ordered (&ready_list, &cur->elem,&compare_priority,NULL);
     // list_push_back (&ready_list, &cur->elem);
+  }
+
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -365,6 +384,12 @@ void
 thread_set_priority (int new_priority)
 {
   thread_current ()->priority = new_priority;
+  if (new_priority<maxpriority)
+  {
+    // maxpriority=new_priority;
+    thread_yield();
+    /* code */
+  }
 }
 
 /* Returns the current thread's priority. */
@@ -591,6 +616,16 @@ schedule (void)
 {
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
+  //the head has now been popped out from the ready list. maxpriority is now that of the thread at the head
+  struct list_elem *e =list_begin(&ready_list);
+
+  if (e==NULL) {
+    maxpriority=-1;
+  }
+  else
+  {
+    maxpriority=(list_entry(e, struct thread, elem))->priority;
+  }
   struct thread *prev = NULL;
 
   ASSERT (intr_get_level () == INTR_OFF);
@@ -604,6 +639,8 @@ schedule (void)
   if (cur != next)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
+  // printf("607 next thread priority: %d\n",next->priority );
+
 }
 
 /* Returns a tid to use for a new thread. */

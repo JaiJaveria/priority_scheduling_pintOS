@@ -195,7 +195,11 @@ int main(void)
   {
     ERROR("Failed to read %d characters from console, read %d.\n", READ_CONSOLE_COUNT, bytes_read);
   }
-
+  // for (size_t i = 0; i < bytes_read; i++)
+  // {
+  //   printf("%c ",sbuf[i] );
+  // }
+  // TITLE("abc\n");
   SUCCESS("TEST 6: Passed\n");
 
 

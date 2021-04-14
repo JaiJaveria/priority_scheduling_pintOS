@@ -129,7 +129,7 @@ static void
 syscall_handler (struct intr_frame *f)
 {
   int* NUMBER= (int*) ((f->esp));
-  printf("syscall.c-122 syscall number %d\n", *NUMBER);
+  // printf("syscall.c-122 syscall number %d\n", *NUMBER);
   switch (*NUMBER) {
     case SYS_WRITE:
       {
@@ -298,6 +298,18 @@ syscall_handler (struct intr_frame *f)
         lock_release(&file_lock);
         break;
       }
+    case SYS_REMOVE:
+      {
+          struct open_args *args = (struct open_args *) f->esp;
+          if (!validate_user_addr_range(args->file,1,f->esp,false)) {
+            printf("Invalid access in sys call remove. Exiting\n");
+            invalid_access();
+          }
+          lock_acquire(&file_lock);
+          f->eax=filesys_remove(args->file);
+          lock_release(&file_lock);
+          break;
+        }
     default:
     {
         printf("System calls not implemented.\n");
