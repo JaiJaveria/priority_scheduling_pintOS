@@ -121,7 +121,7 @@ start_process (void *load_p)
   /* no need for file_name anymore */
   palloc_free_page (file_name);
  
-//  hex_dump(esp, esp, (char*)if_.esp - esp, true);
+  //  hex_dump(esp, esp, (char*)if_.esp - esp, true);
 
   if_.esp = esp;
   /* Start the user process by simulating a return from an
@@ -146,6 +146,11 @@ start_process (void *load_p)
 int
 process_wait (tid_t child_tid)
 {
+  //jai add Mar 31
+  while(true)
+  {
+    if(child_tid)
+  }
 }
 
 /* Free the current process's resources. */
@@ -155,11 +160,11 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
-#ifdef VM
-  /* close also the exec file assoiated with this */
-  if(cur->execfile)
-    file_close(cur->execfile);
-#endif
+  #ifdef VM
+    /* close also the exec file assoiated with this */
+    if(cur->execfile)
+      file_close(cur->execfile);
+  #endif
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -296,9 +301,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
-#ifdef VM
-  t->execfile = file; /* store this for use in pagefault */
-#endif
+  #ifdef VM
+    t->execfile = file; /* store this for use in pagefault */
+  #endif
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
       || memcmp (ehdr.e_ident, "\177ELF\1\1\1", 7)
@@ -361,15 +366,15 @@ load (const char *file_name, void (**eip) (void), void **esp)
                   read_bytes = 0;
                   zero_bytes = ROUND_UP (page_offset + phdr.p_memsz, PGSIZE);
                 }
-#ifdef VM
-              if (!lazy_load_segment (file, file_page, (void *) mem_page,
-                                 read_bytes, zero_bytes, writable))
-                goto done;
-#else
-              if (!load_segment (file, file_page, (void *) mem_page,
-                                 read_bytes, zero_bytes, writable))
-                goto done;
-#endif
+  #ifdef VM
+                if (!lazy_load_segment (file, file_page, (void *) mem_page,
+                                   read_bytes, zero_bytes, writable))
+                  goto done;
+  #else
+                if (!load_segment (file, file_page, (void *) mem_page,
+                                   read_bytes, zero_bytes, writable))
+                  goto done;
+  #endif
             }
           else
             goto done;
@@ -388,8 +393,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-/* Do not close this anymore - file will be used in exception.c page fault */
-//  file_close (file);
+  /* Do not close this anymore - file will be used in exception.c page fault */
+  //  file_close (file);
   return success;
 }
 
