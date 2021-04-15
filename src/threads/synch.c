@@ -236,7 +236,7 @@ lock_acquire (struct lock *lock)
       {
         struct locksAndPriorities_elem *s= malloc (sizeof (struct locksAndPriorities_elem) );
         s->lock=lock;
-        s->priority=thread_current()->priority;//old value of priority
+        s->priority=thread_current()->priority;//new value of priority
         // s->priority=(lock->holder)->priority;//old value of priority
         list_push_back(&(lock->holder)->locksAndPriorities,&(s->elem));
         /* code */
