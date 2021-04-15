@@ -403,13 +403,20 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  thread_current ()->priority = new_priority;
-  if (new_priority<maxpriority)
+  struct thread *t=thread_current();
+  t->first_priority = new_priority;
+  //if there are any other thread that are waiting for a lock held by the current thread with more priority that the previous priority of t then do not update the current priority of t. let it be as specified by the other threads. IF THE NEW PRIORITY IS MORE THAN THAT THEN ALSO
+  if (list_empty(&t->locksAndPriorities))
   {
-    // maxpriority=new_priority;
-    thread_yield();
-    /* code */
+    t->priority = new_priority;
+    if (new_priority<maxpriority)
+    {
+      // maxpriority=new_priority;
+      thread_yield();
+      /* code */
+    }
   }
+
 }
 
 /* Returns the current thread's priority. */
