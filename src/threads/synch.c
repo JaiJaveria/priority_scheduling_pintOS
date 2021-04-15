@@ -217,11 +217,26 @@ lock_acquire (struct lock *lock)
     if ( (lock->holder)->priority<thread_current()->priority)
     {
       //priority will change now
-      //store the previous value of priority to be restored when this lock will be released
-      struct locksAndPriorities_elem *s= malloc (sizeof (struct locksAndPriorities_elem) );
-      s->lock=lock;
-      s->priority=(lock->holder)->priority;//old value of priority
-      list_push_back((lock->holder)->locksAndPriorities,&(s->elem));
+      //store the previous value of priority to be restored when this lock will be released. ONLY IF AN ENTRY FOR THIS LOCK IN THE HOLDER NOT THERE
+      int exist=0;
+      struct list_elem *e;
+      for ( e = list_begin (&lock->holder->locksAndPriorities); e != list_end (&lock->holder->locksAndPriorities);  e = list_next (e))
+      {
+        if (list_entry(e,struct locksAndPriorities_elem, elem)->lock==lock)
+        {
+          exist=1;
+          break;
+          /* code */
+        }
+      }
+      if (exist==0)
+      {
+        struct locksAndPriorities_elem *s= malloc (sizeof (struct locksAndPriorities_elem) );
+        s->lock=lock;
+        s->priority=(lock->holder)->priority;//old value of priority
+        list_push_back(&(lock->holder)->locksAndPriorities,&(s->elem));
+        /* code */
+      }
       (lock->holder)->priority=thread_current()->priority;
       // list_sort(&ready_list,&compare_priority,NULL);
     }
@@ -263,7 +278,18 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  lock->holder->priority=lock->holder->first_priority;
+  //priority restoration
+  struct list_elem *e;
+  for ( e = list_begin (&lock->holder->locksAndPriorities); e != list_end (&lock->holder->locksAndPriorities);  e = list_next (e))
+  {
+    struct locksAndPriorities_elem *s=list_entry (e, struct locksAndPriorities_elem, elem);
+    if (s->lock==lock)
+    {
+      lock->holder->priority=s->priority;
+      list_remove(e);
+      /* code */
+    }
+  }
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
