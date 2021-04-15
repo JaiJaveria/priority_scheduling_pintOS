@@ -157,5 +157,5 @@ int thread_get_load_avg (void);
 struct thread* id_to_thread(tid_t tid);
 //function to compare prioritites of two threads. used for inserting in a list according to priority
 bool compare_priority(const struct list_elem *e1,const struct list_elem *e2, void *args);
-
+bool not_compare_priority(const struct list_elem *e1,const struct list_elem *e2, void *args);
 #endif /* threads/thread.h */

@@ -217,13 +217,16 @@ lock_acquire (struct lock *lock)
     if ( (lock->holder)->priority<thread_current()->priority)
     {
       //priority will change now
-      //store the previous value of priority to be restored when this lock will be released. ONLY IF AN ENTRY FOR THIS LOCK IN THE HOLDER NOT THERE
+      //store the priority with the lock. ONLY IF AN ENTRY FOR THIS LOCK IN THE HOLDER NOT THERE. UPDATE OTHERWISE. when the lock is realeased its entry is deleted and the max of the prorities in locksAndPriorities is taken as new priority. when all finished, the original priority is taken
       int exist=0;
       struct list_elem *e;
       for ( e = list_begin (&lock->holder->locksAndPriorities); e != list_end (&lock->holder->locksAndPriorities);  e = list_next (e))
       {
-        if (list_entry(e,struct locksAndPriorities_elem, elem)->lock==lock)
+        struct locksAndPriorities_elem *s=list_entry(e,struct locksAndPriorities_elem, elem);
+        if (s->lock==lock)
         {
+          //update the entry with the larger priority
+          s->priority=thread_current()->priority;
           exist=1;
           break;
           /* code */
@@ -233,7 +236,8 @@ lock_acquire (struct lock *lock)
       {
         struct locksAndPriorities_elem *s= malloc (sizeof (struct locksAndPriorities_elem) );
         s->lock=lock;
-        s->priority=(lock->holder)->priority;//old value of priority
+        s->priority=thread_current()->priority;//old value of priority
+        // s->priority=(lock->holder)->priority;//old value of priority
         list_push_back(&(lock->holder)->locksAndPriorities,&(s->elem));
         /* code */
       }
@@ -285,8 +289,19 @@ lock_release (struct lock *lock)
     struct locksAndPriorities_elem *s=list_entry (e, struct locksAndPriorities_elem, elem);
     if (s->lock==lock)
     {
-      lock->holder->priority=s->priority;
       list_remove(e);
+      if (list_empty(&lock->holder->locksAndPriorities))
+      {
+        lock->holder->priority=lock->holder->first_priority;
+      }
+      else
+      {
+        struct list_elem *e=(list_max(&lock->holder->locksAndPriorities,&not_compare_priority, NULL));
+        struct locksAndPriorities_elem *s=list_entry(e,struct locksAndPriorities_elem,elem);
+        lock->holder->priority=s->priority;
+      }
+
+      break;
       /* code */
     }
   }

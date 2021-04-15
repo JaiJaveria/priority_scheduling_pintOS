@@ -216,10 +216,15 @@ thread_create (const char *name, int priority,
 
   return tid;
 }
-bool compare_priority(const struct list_elem *e1,const struct list_elem *e2, void *args)
+bool compare_priority(const struct list_elem *e1,const struct list_elem *e2, void *args UNUSED)
 {
   // printf("211 Inside compare _priority\n" );
   return ( (list_entry(e1, struct thread, elem)->priority) > (list_entry(e2, struct thread, elem)->priority));
+}
+bool not_compare_priority(const struct list_elem *e1,const struct list_elem *e2, void *args UNUSED)
+{
+  // printf("211 Inside compare _priority\n" );
+  return ( (list_entry(e1, struct thread, elem)->priority) < (list_entry(e2, struct thread, elem)->priority));
 }
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().
