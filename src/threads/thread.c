@@ -205,8 +205,11 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  // printf("208 current thread priority %d\n",thread_current()->priority );
+  // printf("209 new thread priority %d\n",priority );
   if (thread_current()->priority<priority)
   {
+    // printf("212 just before yield\n" );
     thread_yield();
     /* code */
   }
@@ -227,6 +230,7 @@ bool compare_priority(const struct list_elem *e1,const struct list_elem *e2, voi
 void
 thread_block (void)
 {
+  // printf("    233 Inside thread_block. cur thread priority %d\n",thread_current()->priority );
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
 
@@ -238,7 +242,7 @@ thread_block (void)
    This is an error if T is not blocked.  (Use thread_yield() to
    make the running thread ready.)
 
-   This function does not preempt the running thread.  This can
+   UPDATE: This function does preempt the running thread.  This can
    be important: if the caller had disabled interrupts itself,
    it may expect that it can atomically unblock a thread and
    update other data. */
@@ -258,7 +262,17 @@ thread_unblock (struct thread *t)
   list_insert_ordered (&ready_list, &t->elem,&compare_priority,NULL);
   // list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
+  // preemption when priority more
+  // printf("    265 Inside thread unblock.\n" );
+  // printf("      cur %d\n",thread_current()->priority );
+  // printf("      unblock %d\n",t->priority );
+  if (t->priority >thread_current()->priority && thread_current()!=idle_thread)
+  {
+    thread_yield();
+  }
   intr_set_level (old_level);
+
+
 }
 
 /* Returns the name of the running thread. */
@@ -326,6 +340,7 @@ thread_exit (void)
 void
 thread_yield (void)
 {
+  // printf("    342 Inside thread yield. Running thread priority: %d\n", thread_current()->priority );
   struct thread *cur = thread_current ();
   enum intr_level old_level;
 
@@ -516,6 +531,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->first_priority = priority;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
@@ -615,7 +631,9 @@ static void
 schedule (void)
 {
   struct thread *cur = running_thread ();
+  int storeCurP = cur->priority;
   struct thread *next = next_thread_to_run ();
+  int storeNextP = next->priority;
   //the head has now been popped out from the ready list. maxpriority is now that of the thread at the head
   struct list_elem *e =list_begin(&ready_list);
 
@@ -640,6 +658,10 @@ schedule (void)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
   // printf("607 next thread priority: %d\n",next->priority );
+  // printf("623 curr thread priority %d\n",cur->priority );
+  // printf("    658 Inside thread schedule. runninng thread priority %d.\n",storeCurP );
+  // printf("    659 next thread priority %d\n",storeNextP );
+  // printf("    660 next thread idle? %d\n",next==idle_thread );
 
 }
 

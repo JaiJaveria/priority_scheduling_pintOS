@@ -89,6 +89,7 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int first_priority;                       /* Priority. that was given at the time of creation and not donated */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
@@ -147,5 +148,7 @@ int thread_get_load_avg (void);
 
 /* look through all threads and find the one with tid, else null */
 struct thread* id_to_thread(tid_t tid);
+//function to compare prioritites of two threads. used for inserting in a list according to priority
+bool compare_priority(const struct list_elem *e1,const struct list_elem *e2, void *args);
 
 #endif /* threads/thread.h */
