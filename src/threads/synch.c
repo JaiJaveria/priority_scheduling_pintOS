@@ -29,9 +29,10 @@
 #include "threads/synch.h"
 #include <stdio.h>
 #include <string.h>
+// #include <stdlib.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-
+#include "threads/malloc.h"
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -215,6 +216,12 @@ lock_acquire (struct lock *lock)
   {
     if ( (lock->holder)->priority<thread_current()->priority)
     {
+      //priority will change now
+      //store the previous value of priority to be restored when this lock will be released
+      struct locksAndPriorities_elem *s= malloc (sizeof (struct locksAndPriorities_elem) );
+      s->lock=lock;
+      s->priority=(lock->holder)->priority;//old value of priority
+      list_push_back((lock->holder)->locksAndPriorities,&(s->elem));
       (lock->holder)->priority=thread_current()->priority;
       // list_sort(&ready_list,&compare_priority,NULL);
     }

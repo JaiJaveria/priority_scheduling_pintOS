@@ -6,6 +6,13 @@
 #include <stdint.h>
 #include "threads/synch.h"
 
+//multiple priority donation working
+struct locksAndPriorities_elem
+{
+  struct lock *lock;
+  int priority;
+  struct list_elem elem;
+};
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -91,7 +98,7 @@ struct thread
     int priority;                       /* Priority. */
     int first_priority;                       /* Priority. that was given at the time of creation and not donated */
     struct list_elem allelem;           /* List element for all threads list. */
-
+    struct list *locksAndPriorities;
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
