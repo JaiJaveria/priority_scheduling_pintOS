@@ -170,4 +170,6 @@ struct thread* id_to_thread(tid_t tid);
 //function to compare prioritites of two threads. used for inserting in a list according to priority
 bool compare_priority(const struct list_elem *e1,const struct list_elem *e2, void *args);
 bool not_compare_priority(const struct list_elem *e1,const struct list_elem *e2, void *args);
+bool compare_condvar_priority(const struct list_elem *e1,const struct list_elem *e2, void *args UNUSED);
+
 #endif /* threads/thread.h */

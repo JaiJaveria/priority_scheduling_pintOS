@@ -16,7 +16,7 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 
-struct lock_and_sema 
+struct lock_and_sema
   {
     struct lock lock;
     struct semaphore sema;
@@ -60,7 +60,7 @@ l_thread_func (void *ls_)
 }
 
 static void
-m_thread_func (void *ls_) 
+m_thread_func (void *ls_)
 {
   struct lock_and_sema *ls = ls_;
 

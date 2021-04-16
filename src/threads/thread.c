@@ -221,6 +221,13 @@ bool compare_priority(const struct list_elem *e1,const struct list_elem *e2, voi
   // printf("211 Inside compare _priority\n" );
   return ( (list_entry(e1, struct thread, elem)->priority) > (list_entry(e2, struct thread, elem)->priority));
 }
+bool compare_condvar_priority(const struct list_elem *e1,const struct list_elem *e2, void *args UNUSED)
+{
+  // printf("211 Inside compare _priority\n" );
+  struct semaphore_elem *e1s=(list_entry(e1, struct semaphore_elem, elem));
+  struct semaphore_elem *e2s=(list_entry(e2, struct semaphore_elem, elem));
+  return ( (list_entry(list_front(&(e1s->semaphore).waiters), struct thread, elem)->priority) > list_entry(list_front(&(e2s->semaphore).waiters), struct thread, elem)->priority);
+}
 bool not_compare_priority(const struct list_elem *e1,const struct list_elem *e2, void *args UNUSED)
 {
   // printf("211 Inside compare _priority\n" );

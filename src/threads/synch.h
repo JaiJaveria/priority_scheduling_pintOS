@@ -5,11 +5,17 @@
 #include <stdbool.h>
 
 /* A counting semaphore. */
-struct semaphore 
+struct semaphore
   {
     unsigned value;             /* Current value. */
     struct list waiters;        /* List of waiting threads. */
   };
+  /* One semaphore in a list. */
+  struct semaphore_elem
+    {
+      struct list_elem elem;              /* List element. */
+      struct semaphore semaphore;         /* This semaphore. */
+    };
 
 void sema_init (struct semaphore *, unsigned value);
 void sema_down (struct semaphore *);
@@ -18,7 +24,7 @@ void sema_up (struct semaphore *);
 void sema_self_test (void);
 
 /* Lock. */
-struct lock 
+struct lock
   {
     struct thread *holder;      /* Thread holding lock (for debugging). */
     struct semaphore semaphore; /* Binary semaphore controlling access. */
@@ -31,7 +37,7 @@ void lock_release (struct lock *);
 bool lock_held_by_current_thread (const struct lock *);
 
 /* RWLock. */
-struct rwlock 
+struct rwlock
   {
     unsigned read_count; /* number of readers holding the lock */
     struct lock read_lock; /* readers access. */
@@ -45,7 +51,7 @@ void rwlock_write_acquire (struct rwlock *);
 void rwlock_write_release (struct rwlock *);
 
 /* Condition variable. */
-struct condition 
+struct condition
   {
     struct list waiters;        /* List of waiting threads. */
   };
