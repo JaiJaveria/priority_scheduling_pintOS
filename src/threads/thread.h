@@ -13,6 +13,17 @@ struct locksAndPriorities_elem
   int priority;
   struct list_elem elem;
 };
+struct waiting_locks_elem
+{
+  struct lock *lock;
+  struct list_elem elem;
+};
+struct thread_lock_list_elem
+{
+  struct thread *thread;
+  struct lock *lock;
+  struct list_elem elem;
+};
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -99,6 +110,7 @@ struct thread
     int first_priority;                       /* Priority. that was given at the time of creation and not donated */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list locksAndPriorities;
+    struct list waiting_locks;//all the locks the thread is waiting for
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 

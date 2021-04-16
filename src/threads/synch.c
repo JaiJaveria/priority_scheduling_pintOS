@@ -211,9 +211,14 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  //priority donation
   if (lock->holder !=NULL)
   {
+    //lock owned by some other thread. add the lock in the waiting list of crrent thread
+    struct waiting_locks_elem *w=malloc(sizeof ( struct waiting_locks_elem));
+    w->lock=lock;
+    list_push_back(&thread_current()->waiting_locks,&w->elem);
+
+    //priority donation
     if ( (lock->holder)->priority<thread_current()->priority)
     {
       //priority will change now
@@ -241,12 +246,65 @@ lock_acquire (struct lock *lock)
         list_push_back(&(lock->holder)->locksAndPriorities,&(s->elem));
         /* code */
       }
-      (lock->holder)->priority=thread_current()->priority;
+      // (lock->holder)->priority=thread_current()->priority;
+      //implement nested donoations
+      struct list queue;
+      list_init(&queue);
+      struct thread_lock_list_elem *st=malloc(sizeof(struct thread_lock_list_elem));
+      st->thread=lock->holder;
+      st->lock=lock;
+      list_push_back(&queue, &st->elem);
+      while (!list_empty(&queue))
+      {
+        struct thread_lock_list_elem *t=list_entry(list_pop_front(&queue), struct thread_lock_list_elem, elem);
+        if (t->thread->priority<thread_current()->priority)
+        {
+          t->thread->priority=thread_current()->priority;
+          //update the priority of the lock in locksAndPriorities of the thread as Well
+          struct list_elem *el;
+          for ( el = list_begin (&t->thread->locksAndPriorities); el != list_end (&t->thread->waiting_locks);  el = list_next (el))
+          {
+            struct locksAndPriorities_elem *lp=list_entry(el, struct locksAndPriorities_elem,elem);
+            if (lp->lock==t->lock)
+            {
+              lp->priority=thread_current()->priority;
+              break;
+              /* code */
+            }
+          }
+
+          /* code */
+        }
+        //now add all the threads which are the owners of the locks thread t is waiting on.
+        struct list_elem *e;
+        for ( e = list_begin (&t->thread->waiting_locks); e != list_end (&t->thread->waiting_locks);  e = list_next (e))
+        {
+          struct waiting_locks_elem *ws=list_entry(e,struct waiting_locks_elem, elem);
+          struct thread_lock_list_elem *st=malloc(sizeof(struct thread_lock_list_elem));
+          st->thread=ws->lock->holder;
+          st->lock=ws->lock;
+          list_push_back(&queue, &st->elem);
+        }
+        free(t);
+      }
       // list_sort(&ready_list,&compare_priority,NULL);
     }
     /* code */
   }
   sema_down (&lock->semaphore);
+  //now the lock has been finally acquired by the current thread. remove it from waiting list.
+  struct list_elem *e;
+  for ( e = list_begin (&thread_current()->waiting_locks); e != list_end (&thread_current()->waiting_locks);  e = list_next (e))
+  {
+    struct waiting_locks_elem *w=list_entry(e,struct waiting_locks_elem, elem);
+    if (w->lock==lock)
+    {
+      //remove this
+      list_remove(e);
+      free(w);
+      break;
+    }
+  }
 
   lock->holder = thread_current ();
 }
@@ -290,6 +348,7 @@ lock_release (struct lock *lock)
     if (s->lock==lock)
     {
       list_remove(e);
+      free(s);
       if (list_empty(&lock->holder->locksAndPriorities))
       {
         lock->holder->priority=lock->holder->first_priority;
@@ -297,12 +356,11 @@ lock_release (struct lock *lock)
       else
       {
         struct list_elem *e=(list_max(&lock->holder->locksAndPriorities,&not_compare_priority, NULL));
-        struct locksAndPriorities_elem *s=list_entry(e,struct locksAndPriorities_elem,elem);
-        lock->holder->priority=s->priority;
+        struct locksAndPriorities_elem *sl=list_entry(e,struct locksAndPriorities_elem,elem);
+        lock->holder->priority=sl->priority;
       }
 
       break;
-      /* code */
     }
   }
   lock->holder = NULL;

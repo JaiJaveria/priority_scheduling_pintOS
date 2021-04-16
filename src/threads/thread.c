@@ -544,8 +544,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->first_priority = priority;
-  // t->locksAndPriorities=malloc(sizeof(struct list));
   list_init(&t->locksAndPriorities);
+  list_init(&t->waiting_locks);
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
